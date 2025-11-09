@@ -1,28 +1,90 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react';
+import Header from './components/Header';
+import TaskInput from './components/TaskInput';
+import TaskList from './components/TaskList';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tasks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const addTask = (text) => {
+    setTasks((prev) => [
+      { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now() },
+      ...prev,
+    ]);
+  };
+
+  const toggleTask = (id) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+  };
+
+  const deleteTask = (id) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const done = tasks.filter((t) => t.completed).length;
+    return { total, done, remaining: total - done };
+  }, [tasks]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Vibe Coding Platform
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Your AI-powered development environment
-        </p>
-        <div className="text-center">
-          <button
-            onClick={() => setCount(count + 1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          >
-            Count is {count}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-indigo-50 to-purple-50">
+      <div className="mx-auto max-w-xl px-6 py-10">
+        <Header />
+
+        <div className="mt-6 rounded-2xl bg-white/70 backdrop-blur shadow-xl ring-1 ring-black/5 p-5">
+          <TaskInput onAdd={addTask} />
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{stats.remaining}</span> remaining •{' '}
+              <span className="font-medium text-gray-900">{stats.done}</span> completed
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                onClick={() => setFilter('all')}
+                className={`rounded-full px-3 py-1 border ${filter === 'all' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-700'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter('active')}
+                className={`rounded-full px-3 py-1 border ${filter === 'active' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-700'}`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setFilter('completed')}
+                className={`rounded-full px-3 py-1 border ${filter === 'completed' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-700'}`}
+              >
+                Completed
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <TaskList tasks={tasks} onToggle={toggleTask} onDelete={deleteTask} filter={filter} />
+          </div>
         </div>
+
+        <p className="mt-6 text-center text-xs text-gray-500">
+          Your tasks are stored in your browser so they persist across sessions.
+        </p>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
